@@ -1,59 +1,98 @@
-import subprocess
-from PIL import Image, ImageDraw, ImageFont
+import random
+import io
+from PIL import Image
+from pygments import highlight
+from pygments.lexers import guess_lexer_for_filename, TextLexer
+from pygments.formatters import ImageFormatter
+from pygments.styles import get_all_styles, get_style_by_name
+
+styles = list(get_all_styles())
+font_style = list()
+
+def _hex_to_rgb(color):
+    color = (color or "").strip().lstrip("#")
+    if len(color) == 3:
+        color = "".join(ch * 2 for ch in color)
+    if len(color) != 6:
+        return 39, 40, 34  # monokai-like fallback
+    return tuple(int(color[i:i + 2], 16) for i in (0, 2, 4))
 
 
-def create_screenshot_image(lines, background_color=(40, 44, 52), text_color=(171, 178, 191)):
-    """Create a styled code snippet image."""
-    
-    # Font settings
-    font_size = 16
+def _line_number_colors(style_name):
+    """Use same background as the code area and a high-contrast number color."""
     try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", font_size)
-    except OSError:
-        font = ImageFont.load_default()
-    
-    # Layout settings
-    padding = 40
-    line_height = font_size + 8
-    
-    # Calculate image dimensions based on content
-    max_line_length = max(len(line) for line in lines) if lines else 20
-    char_width = font_size * 0.6  # Approximate width per character
-    
-    width = int(max_line_length * char_width) + (padding * 2)
-    height = len(lines) * line_height + (padding * 2)
-    
-    # Create image
-    img = Image.new('RGB', (width, height), color=background_color)
-    draw = ImageDraw.Draw(img)
-    
-    # Draw each line of code
-    for i, line in enumerate(lines):
-        y = padding + (i * line_height)
-        draw.text((padding, y), line.rstrip(), fill=text_color, font=font)
-    
-    return img
+        style_cls = get_style_by_name(style_name)
+        bg = style_cls.background_color or "#272822"
+    except Exception:
+        bg = "#272822"
+
+    r, g, b = _hex_to_rgb(bg)
+    luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+    fg = "#111111" if luminance > 0.6 else "#f5f5f5"
+    return bg, fg
+
+def create_highlighted_image(code_text, file_name, style):
+    """Create a syntax-highlighted image from code text."""
+    try:
+        lexer = guess_lexer_for_filename(file_name, code_text)
+    except Exception:
+        lexer = TextLexer()
+
+    line_number_bg, line_number_fg = _line_number_colors(style)
+
+    formatter = ImageFormatter(
+        style=style,
+        font_name="DejaVu Sans Mono",
+        font_size=16,
+        line_numbers=True,
+        image_pad=10,
+        line_number_separator=False,
+        line_pad=4,
+        line_number_bg=line_number_bg,
+        line_number_fg=line_number_fg
+
+    )
+
+    image_bytes = highlight(code_text, lexer, formatter)
+    return Image.open(io.BytesIO(image_bytes))
+
+
+def parse_line_range(raw_range, total_lines):
+    """Parse 'start-end' or single 'line' input."""
+    raw_range = raw_range.strip()
+    if "-" in raw_range:
+        start_s, end_s = raw_range.split("-", 1)
+        start, end = int(start_s), int(end_s)
+    else:
+        start = end = int(raw_range)
+
+    start = max(1, start)
+    end = min(total_lines, end)
+
+    if start > end:
+        raise ValueError("Start line must be <= end line.")
+    return start, end
+
 
 def main():
-    file_name = input("Enter the name of the file to be screenshot: ")
-    code_lines = input("Enter the code lines to be screenshot: ")
+    file_name = input("Enter the name of the file to be screenshot: ").strip()
+    code_lines = input("Enter line range (e.g. 5-12 or 8): ").strip()
+    style = input(f"Enter the style to use (by default we us monokai, or say random to choose a random style): ").strip() or "monokai"
+    if(style == "random"):
+        style = random.choice(styles)
+    with open(file_name, "r", encoding="utf-8") as f:
+        all_lines = f.readlines()
 
-    terminal_output = subprocess.run(["cat", file_name], capture_output=True, text=True)    
+    start, end = parse_line_range(code_lines, len(all_lines))
+    selected_code = "".join(all_lines[start - 1:end])
 
-    # the end of a sentence would have \n, by spliting by it you are getting the entire sentence or line
-    if "-" in code_lines:
-        start = int(code_lines.split("-")[0])
-        end = int(code_lines.split("-")[1])
+    print(f"Capturing lines {start}-{end} from {file_name}")
 
-    # Build list of lines with line numbers
-    lines = []
-    for i, words in enumerate(terminal_output.stdout.splitlines()):
-        if i + 1 >= start and i + 1 <= end:
-            lines.append(f"{i+1}  {words}")
-
-    img = create_screenshot_image(lines)
+    img = create_highlighted_image(selected_code, file_name, style)
     img.show()
     img.save("code_snippet.png")
     print("Saved to code_snippet.png")
+
+
 if __name__ == "__main__":
     main()
