@@ -1,0 +1,8 @@
+Create a config file which will have 
+    Style - theme 
+    show lines
+    background color 
+
+Instead of asking a bunch of question make take arguments
+    1st argument is the name of the file, it's location
+    2nd start/end positions

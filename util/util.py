@@ -25,11 +25,9 @@ def line_number_colors(style_name):
     fg = "#111111" if luminance > 0.6 else "#f5f5f5"
     return bg, fg
 
-def parse_line_range(line_selection, total_lines):
-    """Parse 'start-end' or single 'line' input."""
-    line_selection = line_selection.strip()
+def get_line_limits(line_selection, total_lines):
     if "-" in line_selection:
-        start_line, end_line = line_selection.split("-", 1)
+        start_line, end_line = line_selection.split("-")
         start, end = int(start_line), int(end_line)
     else:
         start = int(line_selection)

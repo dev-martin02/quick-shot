@@ -1,5 +1,6 @@
 import random
 import io
+import sys
 from PIL import Image
 from pygments import highlight
 from pygments.lexers import guess_lexer_for_filename, TextLexer
@@ -10,7 +11,8 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.prompt import Prompt
 
-from util.util import line_number_colors, parse_line_range
+from config import Image_Config
+from util.util import get_line_limits
 
 console = Console()
 styles = list(get_all_styles())
@@ -23,19 +25,8 @@ def create_highlighted_image(code_text, file_name, style):
     except Exception:
         lexer = TextLexer()
 
-    line_number_bg, line_number_fg = line_number_colors(style)
-
-    formatter = ImageFormatter(
-        style=style,
-        font_name="DejaVu Sans Mono",
-        font_size=16,
-        line_numbers=True,
-        image_pad=10,
-        line_number_separator=False,
-        line_pad=4,
-        line_number_bg=line_number_bg,
-        line_number_fg=line_number_fg
-    )
+    img_config = Image_Config(style=style, line_numbers=True).__dict__
+    formatter = ImageFormatter(**img_config) # We used ** to unpack the content
 
     image_bytes = highlight(code_text, lexer, formatter)
     return Image.open(io.BytesIO(image_bytes))
@@ -53,9 +44,8 @@ def show_styles():
 
 
 def main():
-
     console.print(Panel("Code Screenshot Generator", style="bold cyan"))
-
+    
     file_name = Prompt.ask("File to screenshot")
 
     try:
@@ -85,7 +75,7 @@ def main():
         style = random.choice(styles)
         console.print(f"[yellow]Random style selected:[/yellow] {style}")
 
-    start, end = parse_line_range(lines, len(all_lines))
+    start, end = get_line_limits(lines, len(all_lines))
     selected_code = "".join(all_lines[start - 1:end])
 
     console.print(
@@ -101,5 +91,29 @@ def main():
     img.show()
 
 
+class ScreenshotFileHandler:
+    def __init__(self, file_path):
+        self.file_path = file_path
+        self.content = self.get_file_content()
+        self.lines = len(self.content)
+
+    def get_file_content(self):
+        try:
+            with open(self.file_path, "r", encoding="utf-8") as f:
+                return f.readlines()
+        except FileNotFoundError:
+            console.print(f"[red]File not found:[/red] {self.file_path}")
+            return []
+
 if __name__ == "__main__":
     main()
+    arguments = sys.argv[1:] 
+    
+    file_path = arguments[0]
+    file_info = ScreenshotFileHandler(file_path)
+    print(file_info.lines)
+    lines = arguments[1:]
+    print(file_path)
+    print(lines)
+
+
