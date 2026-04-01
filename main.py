@@ -104,16 +104,51 @@ class ScreenshotFileHandler:
         except FileNotFoundError:
             console.print(f"[red]File not found:[/red] {self.file_path}")
             return []
+        
+    def return_content_lines(self, start, end):
+        code_text = "".join(self.content[start - 1:end])
+        try:
+            lexer = guess_lexer_for_filename(self.file_path, code_text)
+        except Exception as e:
+            console.print(f"[red]Error retrieving lines:[/red] {e}")
+            return ""
+        img_config = Image_Config().__dict__
+        formatter = ImageFormatter(**img_config) # We used ** to unpack the content
+
+        image_bytes = highlight(code_text, lexer, formatter)
+        return Image.open(io.BytesIO(image_bytes))
 
 if __name__ == "__main__":
-    main()
+    # main()
     arguments = sys.argv[1:] 
-    
+    if not len(arguments):
+        console.print("[red]Please provide a file path as the first argument.[/red]")
+        sys.exit(1)
+
     file_path = arguments[0]
     file_info = ScreenshotFileHandler(file_path)
-    print(file_info.lines)
-    lines = arguments[1:]
-    print(file_path)
-    print(lines)
+    lines = ""
 
+    if len(file_info.content) == 0:
+        console.print(f"[red]No content to process or file not found.[/red] {file_info.file_path}")
+        sys.exit(1)
 
+    elif(len(arguments) == 1):
+        console.print(f"[green] No line range specified, capturing all lines! [/green]")
+        lines = f"1-{file_info.lines}"
+
+    elif len(arguments) > 2:
+        console.print("[red]Too many arguments provided. Please follow the format: python main.py <file_path> 'start-end'[/red]")
+        sys.exit(1)
+
+    else: 
+        print(f'[green] Line range specified: {arguments[1]} [/green]')
+        lines = arguments[1]
+
+    start, end = get_line_limits(lines, file_info.lines)
+
+    content = file_info.return_content_lines(start, end)
+
+    output = "code_snippet.png"
+    content.save(output)
+    content.show()

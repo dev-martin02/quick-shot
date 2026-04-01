@@ -28,7 +28,7 @@ def line_number_colors(style_name):
 def get_line_limits(line_selection, total_lines):
     if "-" in line_selection:
         start_line, end_line = line_selection.split("-")
-        start, end = int(start_line), int(end_line)
+        start, end = int(start_line), int(end_line) 
     else:
         start = int(line_selection)
         end = int(total_lines)
