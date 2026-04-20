@@ -1,4 +1,7 @@
 from pygments.styles import get_style_by_name
+from rich.console import Console
+from rich.table import Table
+
 
 def hex_to_rgb(color):
     # Remove whitespace, and the # of the value
@@ -37,3 +40,13 @@ def get_line_limits(line_selection, total_lines):
         raise ValueError("Start line must be less than or equal to end line.")
 
     return start, end
+
+def show_styles(styles: list[str]):
+    """Display available styles."""
+    table = Table(title="Available Pygments Styles")
+
+    table.add_column("Style", style="cyan")
+    for s in styles:
+        table.add_row(s)
+
+    Console().print(table)
