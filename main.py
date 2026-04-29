@@ -1,13 +1,21 @@
 import sys
-from pygments.styles import get_all_styles
+import json
+import os
 from rich.console import Console
 
-from config import ScreenshotFileHandler
+from config import Image_Config, ScreenshotFileHandler
 from util.util import get_line_limits
 
 console = Console()
 
+def ensure_config_file(config_path="config.json"):
+    """Create config file if it doesn't exist"""
+    if not os.path.exists(config_path):
+        default_config = Image_Config().save_to_file(config_path)
+        console.print(f"[yellow]Config file not found. Creating default config at {config_path}[/yellow]")
+
 def main():
+    ensure_config_file()
     arguments = sys.argv[1:] 
     if not len(arguments):
         console.print("[red]Please provide a file path as the first argument.[/red]")

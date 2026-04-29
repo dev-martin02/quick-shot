@@ -1,0 +1,12 @@
+{
+  "image_config": {
+    "font_name": "DejaVu Sans Mono",
+    "font_size": 16,
+    "image_pad": 10,
+    "line_pad": 4,
+    "style": "dracula",
+    "line_numbers": false,
+    "line_number_bg": null,
+    "line_number_fg": null
+  }
+}
